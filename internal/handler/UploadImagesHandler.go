@@ -13,6 +13,7 @@ func UploadImagesHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		// Log the error or handle it appropriately
 		fmt.Printf("error in saveing file in server: %v\n", err)
+		DeleteUploadedFiles(r)
 		return
 	}
 
@@ -113,4 +114,13 @@ func saveFileInServer(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	return nil
+}
+
+func DeleteUploadedFiles(r *http.Request) {
+	r.ParseMultipartForm(10 << 20) // 10 MB
+	files := r.MultipartForm.File["images"]
+	for _, fileHeader := range files {
+		dstPath := filepath.Join("./uploads", r.FormValue("shopId"), "home-image", fileHeader.Filename)
+		os.Remove(dstPath)
+	}
 }
