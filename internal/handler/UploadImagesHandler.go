@@ -20,11 +20,11 @@ func UploadImagesHandler(w http.ResponseWriter, r *http.Request) {
 		DeleteUploadedFiles(r)
 		return
 	}
-	err = UploadFileInS3()
+	err = UploadFileInS3(w, r)
 	if err != nil {
 		// Log the error or handle it appropriately
 		fmt.Printf("error in uploading file to S3: %v\n", err)
-		DeleteUploadedFiles(r)
+		// DeleteUploadedFiles(r)
 		return
 	}
 	// Respond to the client
@@ -135,43 +135,62 @@ func DeleteUploadedFiles(r *http.Request) {
 	}
 }
 
-func UploadFileInS3() error {
+func UploadFileInS3(w http.ResponseWriter, r *http.Request) error {
+	shopId := r.FormValue("shopId")
+	if shopId == "" {
+		return fmt.Errorf("shopId parameter is required")
+	}
+
+	// Get bucket name from environment variable
 	bucket := "barber-shop-home-images"
-	key := "example.jpg" // Object key (name of the file to be created in S3)
-
-	// Path to the file you want to upload
-	filePath := "/Users/starboy/Repos/barber-shop-service/barber-shop-service/go.sum"
-
-	// Initialize a session in the default region configuration
-	sess, err := session.NewSession(&aws.Config{
-		Region: aws.String("eu-north-1"), // Specify your AWS Region
-	})
-	if err != nil {
-		fmt.Println("failed to set session", err)
-		return fmt.Errorf("failed to set session")
+	if bucket == "" {
+		return fmt.Errorf("BARBER_SHOP_HOME_IMAGES_BUCKET_NAME environment variable not set")
+	}
+	// Extract the filename with extension
+	files := r.MultipartForm.File["images"]
+	if len(files) > 5 {
+		http.Error(w, "too many files uploaded. Maximum is 5", http.StatusBadRequest)
+		return fmt.Errorf("too many files uploaded. Maximum is 5")
 	}
 
-	// Create S3 service client
-	svc := s3.New(sess)
+	for _, fileHeader := range files {
+		// Validate file extension
+		filename := fileHeader.Filename
 
-	// Open the file
-	file, err := os.Open(filePath)
-	if err != nil {
-		fmt.Println("Failed to open file", err)
-		return fmt.Errorf("failed to open file")
-	}
-	defer file.Close()
+		filePath := fmt.Sprintf("./uploads/%s/home-image/%s", shopId, filename)
 
-	// Upload the file to S3
-	_, err = svc.PutObject(&s3.PutObjectInput{
-		Bucket: aws.String(bucket),
-		Key:    aws.String(key),
-		Body:   file,
-	})
-	if err != nil {
-		fmt.Println("Failed to upload data to S3", err)
-		return fmt.Errorf("failed to upload data to S3")
+		// Initialize AWS session in the default region configuration
+		sess, err := session.NewSession(&aws.Config{
+			Region: aws.String("eu-north-1"), // Specify your AWS Region
+		})
+		if err != nil {
+			fmt.Println("Failed to set session", err)
+			return fmt.Errorf("failed to set session")
+		}
+		// Create S3 service client
+		svc := s3.New(sess)
+
+		// Open the file
+		fileToUpload, err := os.Open(filePath)
+		if err != nil {
+			fmt.Println("Failed to open file", err)
+			return fmt.Errorf("failed to open file")
+		}
+		defer fileToUpload.Close()
+
+		// Upload the file to S3
+		_, err = svc.PutObject(&s3.PutObjectInput{
+			Bucket: aws.String(bucket),
+			Key:    aws.String(fmt.Sprintf("%s/home-images/%s", shopId, filename)), // Object key
+			Body:   fileToUpload,
+		})
+		if err != nil {
+			fmt.Println("Failed to upload data to S3", err)
+			return fmt.Errorf("failed to upload data to S3")
+		}
 	}
+
+	// Example file path, replace this with your dynamic file path logic
 
 	fmt.Println("File uploaded successfully")
 	return nil
