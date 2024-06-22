@@ -28,6 +28,8 @@ func UploadImagesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Respond to the client
+
+	DeleteUploadedFiles(r)
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("Files uploaded successfully"))
 }
@@ -125,14 +127,19 @@ func saveFileInServer(w http.ResponseWriter, r *http.Request) error {
 
 	return nil
 }
-
 func DeleteUploadedFiles(r *http.Request) {
-	r.ParseMultipartForm(10 << 20) // 10 MB
+	r.ParseMultipartForm(10 << 20)
 	files := r.MultipartForm.File["images"]
+	shopId := r.FormValue("shopId")
+	shopDir := filepath.Join("./uploads", shopId, "home-image")
 	for _, fileHeader := range files {
-		dstPath := filepath.Join("./uploads", r.FormValue("shopId"), "home-image", fileHeader.Filename)
+		dstPath := filepath.Join(shopDir, fileHeader.Filename)
 		os.Remove(dstPath)
 	}
+	os.RemoveAll(shopDir)
+	parentDir := filepath.Join("./uploads", shopId)
+	os.Remove(parentDir)
+
 }
 
 func UploadFileInS3(w http.ResponseWriter, r *http.Request) error {
