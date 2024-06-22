@@ -24,7 +24,7 @@ func UploadImagesHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		// Log the error or handle it appropriately
 		fmt.Printf("error in uploading file to S3: %v\n", err)
-		// DeleteUploadedFiles(r)
+		DeleteUploadedFiles(r)
 		return
 	}
 	// Respond to the client
