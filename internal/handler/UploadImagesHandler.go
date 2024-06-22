@@ -6,6 +6,10 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/s3"
 )
 
 func UploadImagesHandler(w http.ResponseWriter, r *http.Request) {
@@ -16,7 +20,13 @@ func UploadImagesHandler(w http.ResponseWriter, r *http.Request) {
 		DeleteUploadedFiles(r)
 		return
 	}
-
+	err = UploadFileInS3()
+	if err != nil {
+		// Log the error or handle it appropriately
+		fmt.Printf("error in uploading file to S3: %v\n", err)
+		DeleteUploadedFiles(r)
+		return
+	}
 	// Respond to the client
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("Files uploaded successfully"))
@@ -123,4 +133,46 @@ func DeleteUploadedFiles(r *http.Request) {
 		dstPath := filepath.Join("./uploads", r.FormValue("shopId"), "home-image", fileHeader.Filename)
 		os.Remove(dstPath)
 	}
+}
+
+func UploadFileInS3() error {
+	bucket := "barber-shop-home-images"
+	key := "example.jpg" // Object key (name of the file to be created in S3)
+
+	// Path to the file you want to upload
+	filePath := "/Users/starboy/Repos/barber-shop-service/barber-shop-service/go.sum"
+
+	// Initialize a session in the default region configuration
+	sess, err := session.NewSession(&aws.Config{
+		Region: aws.String("eu-north-1"), // Specify your AWS Region
+	})
+	if err != nil {
+		fmt.Println("failed to set session", err)
+		return fmt.Errorf("failed to set session")
+	}
+
+	// Create S3 service client
+	svc := s3.New(sess)
+
+	// Open the file
+	file, err := os.Open(filePath)
+	if err != nil {
+		fmt.Println("Failed to open file", err)
+		return fmt.Errorf("failed to open file")
+	}
+	defer file.Close()
+
+	// Upload the file to S3
+	_, err = svc.PutObject(&s3.PutObjectInput{
+		Bucket: aws.String(bucket),
+		Key:    aws.String(key),
+		Body:   file,
+	})
+	if err != nil {
+		fmt.Println("Failed to upload data to S3", err)
+		return fmt.Errorf("failed to upload data to S3")
+	}
+
+	fmt.Println("File uploaded successfully")
+	return nil
 }
