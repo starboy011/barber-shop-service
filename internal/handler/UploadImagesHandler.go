@@ -18,6 +18,7 @@ func UploadImagesHandler(w http.ResponseWriter, r *http.Request) {
 		// Log the error or handle it appropriately
 		fmt.Printf("error in saveing file in server: %v\n", err)
 		DeleteUploadedFiles(r)
+		w.Write([]byte("error in saveing file in server"))
 		return
 	}
 	err = UploadFileInS3(w, r)
@@ -25,6 +26,7 @@ func UploadImagesHandler(w http.ResponseWriter, r *http.Request) {
 		// Log the error or handle it appropriately
 		fmt.Printf("error in uploading file to S3: %v\n", err)
 		DeleteUploadedFiles(r)
+		w.Write([]byte("error in uploading file to S3:"))
 		return
 	}
 	// Respond to the client
