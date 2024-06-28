@@ -13,8 +13,6 @@ func GetShopName(shopId string) (string, error) {
 		return "", err
 	}
 	defer database.Close()
-
-	// Assuming you have a function to get the shop name by shopId
 	shopName, err := db.GetShopNameById(database, shopId)
 	if err != nil {
 		fmt.Printf("Error fetching shop name for Shop ID: %s. Error: %v\n", shopId, err)
