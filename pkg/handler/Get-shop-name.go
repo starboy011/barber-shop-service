@@ -1,5 +1,3 @@
-// Get_shop_name.go
-
 package handler
 
 import (
