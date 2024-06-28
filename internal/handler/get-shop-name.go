@@ -9,7 +9,7 @@ import (
 func GetShopName(shopId string) (string, error) {
 	database, err := db.InitUsersDB()
 	if err != nil {
-		fmt.Printf("error in connecting Db", err)
+		fmt.Printf("Error in connecting Db for shopId: %s. Error: %v\n", shopId, err)
 		return "", err
 	}
 	defer database.Close()
